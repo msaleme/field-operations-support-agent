@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" 
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+	<!-- Global Error Handler for Field Operations Support Agent -->
+	<error-handler name="global-error-handler" doc:name="Global Error Handler" doc:id="global-error-handler">
+		
+		<!-- Database Connection Errors -->
+		<on-error-propagate type="DB:CONNECTIVITY" doc:name="Database Connection Error" doc:id="db-connectivity-error">
+			<logger level="ERROR" doc:name="Log DB Error" doc:id="log-db-error" 
+				message="Database connection failed: #[error.description]"/>
+			<ee:transform doc:name="DB Error Response" doc:id="db-error-response">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	error: "Database Connectivity Error",
+	message: "Unable to connect to database system. Please try again later.",
+	timestamp: now(),
+	correlationId: correlationId,
+	errorCode: "DB_CONN_001"
+}]]></ee:set-payload>
+				</ee:message>
+				<ee:variables>
+					<ee:set-variable variableName="httpStatus">503</ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</on-error-propagate>
+		
+		<!-- HTTP Connection Errors -->
+		<on-error-propagate type="HTTP:CONNECTIVITY" doc:name="HTTP Connection Error" doc:id="http-connectivity-error">
+			<logger level="ERROR" doc:name="Log HTTP Error" doc:id="log-http-error" 
+				message="HTTP connection failed: #[error.description]"/>
+			<ee:transform doc:name="HTTP Error Response" doc:id="http-error-response">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	error: "Service Connectivity Error",
+	message: "Unable to connect to external service. Please try again later.",
+	timestamp: now(),
+	correlationId: correlationId,
+	errorCode: "HTTP_CONN_001"
+}]]></ee:set-payload>
+				</ee:message>
+				<ee:variables>
+					<ee:set-variable variableName="httpStatus">502</ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</on-error-propagate>
+		
+		<!-- Validation Errors -->
+		<on-error-propagate type="APIKIT:BAD_REQUEST" doc:name="Validation Error" doc:id="validation-error">
+			<logger level="WARN" doc:name="Log Validation Error" doc:id="log-validation-error" 
+				message="Validation failed: #[error.description]"/>
+			<ee:transform doc:name="Validation Error Response" doc:id="validation-error-response">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	error: "Bad Request",
+	message: "Invalid input parameters. Please check your request and try again.",
+	timestamp: now(),
+	correlationId: correlationId,
+	errorCode: "VAL_001",
+	details: error.description
+}]]></ee:set-payload>
+				</ee:message>
+				<ee:variables>
+					<ee:set-variable variableName="httpStatus">400</ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</on-error-propagate>
+		
+		<!-- Timeout Errors -->
+		<on-error-propagate type="HTTP:TIMEOUT" doc:name="Timeout Error" doc:id="timeout-error">
+			<logger level="WARN" doc:name="Log Timeout Error" doc:id="log-timeout-error" 
+				message="Request timeout: #[error.description]"/>
+			<ee:transform doc:name="Timeout Error Response" doc:id="timeout-error-response">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	error: "Request Timeout",
+	message: "The request took too long to process. Please try again.",
+	timestamp: now(),
+	correlationId: correlationId,
+	errorCode: "TIMEOUT_001"
+}]]></ee:set-payload>
+				</ee:message>
+				<ee:variables>
+					<ee:set-variable variableName="httpStatus">408</ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</on-error-propagate>
+		
+		<!-- Security/Authentication Errors -->
+		<on-error-propagate type="HTTP:UNAUTHORIZED" doc:name="Authentication Error" doc:id="auth-error">
+			<logger level="WARN" doc:name="Log Auth Error" doc:id="log-auth-error" 
+				message="Authentication failed: #[error.description]"/>
+			<ee:transform doc:name="Auth Error Response" doc:id="auth-error-response">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	error: "Unauthorized",
+	message: "Authentication required. Please provide valid credentials.",
+	timestamp: now(),
+	correlationId: correlationId,
+	errorCode: "AUTH_001"
+}]]></ee:set-payload>
+				</ee:message>
+				<ee:variables>
+					<ee:set-variable variableName="httpStatus">401</ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</on-error-propagate>
+		
+		<!-- General Application Errors -->
+		<on-error-propagate type="ANY" doc:name="General Error" doc:id="general-error">
+			<logger level="ERROR" doc:name="Log General Error" doc:id="log-general-error" 
+				message="Unexpected error occurred: #[error.description]"/>
+			<ee:transform doc:name="General Error Response" doc:id="general-error-response">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	error: "Internal Server Error",
+	message: "An unexpected error occurred. Please contact support if the issue persists.",
+	timestamp: now(),
+	correlationId: correlationId,
+	errorCode: "GEN_001"
+}]]></ee:set-payload>
+				</ee:message>
+				<ee:variables>
+					<ee:set-variable variableName="httpStatus">500</ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</on-error-propagate>
+		
+	</error-handler>
+
+</mule>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:mac="http://www.mulesoft.org/schema/mule/mac" 
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" 
+	xmlns:mcp="http://www.mulesoft.org/schema/mule/mcp" 
+	xmlns="http://www.mulesoft.org/schema/mule/core" 
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/mcp http://www.mulesoft.org/schema/mule/mcp/current/mule-mcp.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/mac http://www.mulesoft.org/schema/mule/mac/current/mule-mac.xsd">
+
+	<!-- Configuration Properties with Environment Support -->
+	<configuration-properties file="config-${mule.env}.properties" 
+		doc:name="Environment-specific Configuration Properties" 
+		doc:id="env-config-properties"/>
+
+	<!-- HTTP Listener Configuration -->
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="http-listener-config">
+		<http:listener-connection host="${http.host}" port="${http.port}" />
+	</http:listener-config>
+	
+	<!-- Claude AI Configuration via MAC Connector -->
+	<mac:config name="Claude_AI_Config" doc:name="Claude AI Config" doc:id="claude-ai-config">
+		<mac:connection apiKey="${claude.api.key}" model="${claude.model}" />
+	</mac:config>
+	
+	<!-- Database Configuration for Backend Systems -->
+	<db:config name="Asset_Management_DB_Config" doc:name="Asset Management DB Config" doc:id="asset-db-config">
+		<db:generic-connection url="${asset.db.url}" driverClassName="${asset.db.driver}" 
+			user="${asset.db.user}" password="${asset.db.password}" />
+	</db:config>
+	
+	<db:config name="Inventory_DB_Config" doc:name="Inventory DB Config" doc:id="inventory-db-config">
+		<db:generic-connection url="${inventory.db.url}" driverClassName="${inventory.db.driver}" 
+			user="${inventory.db.user}" password="${inventory.db.password}" />
+	</db:config>
+	
+	<db:config name="Work_Order_DB_Config" doc:name="Work Order DB Config" doc:id="work-order-db-config">
+		<db:generic-connection url="${workorder.db.url}" driverClassName="${workorder.db.driver}" 
+			user="${workorder.db.user}" password="${workorder.db.password}" />
+	</db:config>
+	
+	<!-- MCP Server Configuration -->
+	<mcp:server-config name="MCP_Server_Config" doc:name="MCP Server Config" doc:id="mcp-server-config" 
+		serverName="field-operations-support-agent" serverVersion="1.0.0">
+		<mcp:sse-server-connection listenerConfig="HTTP_Listener_config" />
+	</mcp:server-config>
+
+</mule>

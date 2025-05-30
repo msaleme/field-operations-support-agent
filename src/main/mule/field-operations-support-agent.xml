@@ -15,36 +15,16 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
 http://www.mulesoft.org/schema/mule/mac http://www.mulesoft.org/schema/mule/mac/current/mule-mac.xsd">
 
-	<!-- HTTP Listener Configuration -->
-	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="http-listener-config">
-		<http:listener-connection host="${http.host}" port="${http.port}" />
-	</http:listener-config>
-	
-	<!-- Claude AI Configuration via MAC Connector -->
-	<mac:config name="Claude_AI_Config" doc:name="Claude AI Config" doc:id="claude-ai-config">
-		<mac:connection apiKey="${claude.api.key}" model="${claude.model}" />
-	</mac:config>
-	
-	<!-- Database Configuration for Backend Systems -->
-	<db:config name="Asset_Management_DB_Config" doc:name="Asset Management DB Config" doc:id="asset-db-config">
-		<db:generic-connection url="${asset.db.url}" driverClassName="${asset.db.driver}" user="${asset.db.user}" password="${asset.db.password}" />
-	</db:config>
-	
-	<db:config name="Inventory_DB_Config" doc:name="Inventory DB Config" doc:id="inventory-db-config">
-		<db:generic-connection url="${inventory.db.url}" driverClassName="${inventory.db.driver}" user="${inventory.db.user}" password="${inventory.db.password}" />
-	</db:config>
-	
-	<!-- MCP Server Configuration -->
-	<mcp:server-config name="MCP_Server_Config" doc:name="MCP Server Config" doc:id="mcp-server-config" 
-		serverName="field-operations-support-agent" serverVersion="1.0.0">
-		<mcp:sse-server-connection listenerConfig="HTTP_Listener_config" />
-	</mcp:server-config>
+	<!-- Import Global Configurations -->
+	<import file="global-config.xml" doc:name="Global Configuration" doc:id="import-global-config"/>
+	<import file="error-handlers.xml" doc:name="Error Handlers" doc:id="import-error-handlers"/>
 
 	<!-- MCP Session Initialization Flow -->
 	<flow name="mcp-session-init-flow" doc:id="mcp-session-init-flow">
 		<mcp:on-new-session-listener doc:name="On new session listener" doc:id="new-session-listener" config-ref="MCP_Server_Config" />
 		<logger level="INFO" doc:name="Logger" doc:id="session-logger" message="New Field Operations Support Agent session started for technician: #[vars.sessionId]"/>
 		<set-variable variableName="sessionContext" value="#[{}]" doc:name="Initialize Session Context" doc:id="init-session-context" />
+		<error-handler ref="global-error-handler" doc:name="Global Error Handler" doc:id="session-error-handler"/>
 	</flow>
 
 	<!-- F1: SOP & Technical Manual Access Tool -->
@@ -430,6 +410,7 @@ else
 	) joinBy "\n" ++ "="*50 ++ "\n")]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+		<error-handler ref="global-error-handler" doc:name="Global Error Handler" doc:id="work-order-error-handler"/>
 	</flow>
 
 </mule>

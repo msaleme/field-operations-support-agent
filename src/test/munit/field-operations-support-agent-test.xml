@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" 
+	xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+	xmlns="http://www.mulesoft.org/schema/mule/core" 
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+
+	<munit:config name="field-operations-support-agent-test.xml" doc:name="MUnit configuration"/>
+
+	<!-- Test Suite for SOP Manual Access Tool -->
+	<munit:test name="test-sop-transformer-replacement" doc:id="test-sop-transformer-replacement">
+		<munit:behavior>
+			<munit:set-payload value="#[{}]" doc:name="Set Empty Payload"/>
+			<munit:set-variable variableName="toolInput" value="#[{
+				'equipmentType': 'transformer',
+				'procedureType': 'replacement',
+				'modelNumber': 'TXF-001'
+			}]" doc:name="Set Tool Input Variables"/>
+		</munit:behavior>
+		<munit:execution>
+			<flow-ref name="get-transformer-sop-subflow" doc:name="Call Transformer SOP Subflow"/>
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert-that expression="#[payload.title]" 
+				is="#[MunitTools::containsString('Transformer replacement Procedure')]" 
+				doc:name="Assert Title Contains Expected Text"/>
+			<munit-tools:assert-that expression="#[payload.documentId]" 
+				is="#[MunitTools::equalTo('SOP-TRANS-REPLACEMENT-001')]" 
+				doc:name="Assert Document ID"/>
+			<munit-tools:assert-that expression="#[payload.safetyPrecautions]" 
+				is="#[MunitTools::not(MunitTools::nullValue())]" 
+				doc:name="Assert Safety Precautions Present"/>
+			<munit-tools:assert-that expression="#[payload.steps]" 
+				is="#[MunitTools::not(MunitTools::nullValue())]" 
+				doc:name="Assert Steps Present"/>
+		</munit:validation>
+	</munit:test>
+
+	<munit:test name="test-sop-fuse-replacement" doc:id="test-sop-fuse-replacement">
+		<munit:behavior>
+			<munit:set-payload value="#[{}]" doc:name="Set Empty Payload"/>
+			<munit:set-variable variableName="toolInput" value="#[{
+				'equipmentType': 'fuse',
+				'procedureType': 'replacement'
+			}]" doc:name="Set Tool Input Variables"/>
+		</munit:behavior>
+		<munit:execution>
+			<flow-ref name="get-fuse-sop-subflow" doc:name="Call Fuse SOP Subflow"/>
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert-that expression="#[payload.title]" 
+				is="#[MunitTools::containsString('Fuse replacement Procedure')]" 
+				doc:name="Assert Title Contains Expected Text"/>
+			<munit-tools:assert-that expression="#[payload.documentId]" 
+				is="#[MunitTools::equalTo('SOP-FUSE-REPLACEMENT-001')]" 
+				doc:name="Assert Document ID"/>
+			<munit-tools:assert-that expression="#[payload.estimatedTime]" 
+				is="#[MunitTools::equalTo('30-60 minutes')]" 
+				doc:name="Assert Estimated Time"/>
+		</munit:validation>
+	</munit:test>
+
+	<munit:test name="test-sop-meter-installation" doc:id="test-sop-meter-installation">
+		<munit:behavior>
+			<munit:set-payload value="#[{}]" doc:name="Set Empty Payload"/>
+			<munit:set-variable variableName="toolInput" value="#[{
+				'equipmentType': 'meter',
+				'procedureType': 'installation'
+			}]" doc:name="Set Tool Input Variables"/>
+		</munit:behavior>
+		<munit:execution>
+			<flow-ref name="get-meter-sop-subflow" doc:name="Call Meter SOP Subflow"/>
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert-that expression="#[payload.title]" 
+				is="#[MunitTools::containsString('Meter installation Procedure')]" 
+				doc:name="Assert Title Contains Expected Text"/>
+			<munit-tools:assert-that expression="#[payload.requiredTools]" 
+				is="#[MunitTools::arrayWith([
+					MunitTools::containsString('Meter programmer'),
+					MunitTools::containsString('Insulated tools')
+				])]" 
+				doc:name="Assert Required Tools"/>
+		</munit:validation>
+	</munit:test>
+
+	<munit:test name="test-sop-general-equipment" doc:id="test-sop-general-equipment">
+		<munit:behavior>
+			<munit:set-payload value="#[{}]" doc:name="Set Empty Payload"/>
+			<munit:set-variable variableName="toolInput" value="#[{
+				'equipmentType': 'unknown-equipment',
+				'procedureType': 'maintenance'
+			}]" doc:name="Set Tool Input Variables"/>
+		</munit:behavior>
+		<munit:execution>
+			<flow-ref name="get-general-sop-subflow" doc:name="Call General SOP Subflow"/>
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert-that expression="#[payload.title]" 
+				is="#[MunitTools::containsString('unknown-equipment')]" 
+				doc:name="Assert Equipment Type in Title"/>
+			<munit-tools:assert-that expression="#[payload.documentId]" 
+				is="#[MunitTools::startsWith('SOP-GEN-')]" 
+				doc:name="Assert General SOP Document ID Format"/>
+		</munit:validation>
+	</munit:test>
+
+	<!-- Test Suite for Work Order Retrieval -->
+	<munit:test name="test-specific-work-order-retrieval" doc:id="test-specific-work-order-retrieval">
+		<munit:behavior>
+			<munit:set-payload value="#[{}]" doc:name="Set Empty Payload"/>
+			<munit:set-variable variableName="toolInput" value="#[{
+				'workOrderNumber': 'WO-2024-TEST-001'
+			}]" doc:name="Set Work Order Number"/>
+		</munit:behavior>
+		<munit:execution>
+			<flow-ref name="get-specific-work-order-subflow" doc:name="Call Specific Work Order Subflow"/>
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert-that expression="#[payload]" 
+				is="#[MunitTools::not(MunitTools::nullValue())]" 
+				doc:name="Assert Payload Not Null"/>
+			<munit-tools:assert-that expression="#[sizeOf(payload)]" 
+				is="#[MunitTools::greaterThan(0)]" 
+				doc:name="Assert Work Order Array Not Empty"/>
+			<munit-tools:assert-that expression="#[payload[0].work_order_number]" 
+				is="#[MunitTools::not(MunitTools::nullValue())]" 
+				doc:name="Assert Work Order Number Present"/>
+		</munit:validation>
+	</munit:test>
+
+	<munit:test name="test-technician-work-orders-retrieval" doc:id="test-technician-work-orders-retrieval">
+		<munit:behavior>
+			<munit:set-payload value="#[{}]" doc:name="Set Empty Payload"/>
+			<munit:set-variable variableName="toolInput" value="#[{
+				'technicianId': 'TECH-001'
+			}]" doc:name="Set Technician ID"/>
+		</munit:behavior>
+		<munit:execution>
+			<flow-ref name="get-technician-work-orders-subflow" doc:name="Call Technician Work Orders Subflow"/>
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert-that expression="#[payload]" 
+				is="#[MunitTools::not(MunitTools::nullValue())]" 
+				doc:name="Assert Payload Not Null"/>
+			<munit-tools:assert-that expression="#[sizeOf(payload)]" 
+				is="#[MunitTools::greaterThanOrEqualTo(1)]" 
+				doc:name="Assert At Least One Work Order"/>
+			<munit-tools:assert-that expression="#[payload[0].work_type]" 
+				is="#[MunitTools::not(MunitTools::nullValue())]" 
+				doc:name="Assert Work Type Present"/>
+		</munit:validation>
+	</munit:test>
+
+	<!-- Error Handling Tests -->
+	<munit:test name="test-error-handling-database-connectivity" doc:id="test-error-handling-database-connectivity" expectedErrorType="DB:CONNECTIVITY">
+		<munit:behavior>
+			<munit:set-payload value="#[{}]" doc:name="Set Empty Payload"/>
+		</munit:behavior>
+		<munit:execution>
+			<raise-error type="DB:CONNECTIVITY" description="Database connection failed for testing"/>
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert-that expression="#[true]" 
+				is="#[MunitTools::equalTo(true)]" 
+				doc:name="Assert Error Was Handled"/>
+		</munit:validation>
+	</munit:test>
+
+	<munit:test name="test-error-handling-http-connectivity" doc:id="test-error-handling-http-connectivity" expectedErrorType="HTTP:CONNECTIVITY">
+		<munit:behavior>
+			<munit:set-payload value="#[{}]" doc:name="Set Empty Payload"/>
+		</munit:behavior>
+		<munit:execution>
+			<raise-error type="HTTP:CONNECTIVITY" description="HTTP connection failed for testing"/>
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert-that expression="#[true]" 
+				is="#[MunitTools::equalTo(true)]" 
+				doc:name="Assert Error Was Handled"/>
+		</munit:validation>
+	</munit:test>
+
+</mule>

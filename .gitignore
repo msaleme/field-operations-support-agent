@@ -46,3 +46,4 @@ config-prod.properties
 # Application specific
 temp/
 tmp/
+.tooling-project
