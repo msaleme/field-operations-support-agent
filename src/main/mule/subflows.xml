@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" 
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+
+	<!-- SOP Retrieval Subflows -->
+	<sub-flow name="get-transformer-sop-subflow" doc:id="get-transformer-sop-subflow">
+		<ee:transform doc:name="Mock Transformer SOP" doc:id="mock-transformer-sop">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+{
+	title: "Transformer " ++ vars.toolInput.procedureType ++ " Procedure",
+	documentId: "SOP-TRANS-" ++ (vars.toolInput.procedureType upper) ++ "-001",
+	safetyPrecautions: [
+		"Verify power isolation and lockout/tagout procedures",
+		"Test for voltage using approved testing equipment", 
+		"Maintain minimum approach distances per company standards",
+		"Use appropriate PPE including arc flash protection",
+		"Establish communication with system operator"
+	],
+	steps: if (vars.toolInput.procedureType contains "replacement") [
+		"Coordinate with system operations for outage",
+		"Verify transformer is de-energized and grounded",
+		"Disconnect primary and secondary connections", 
+		"Remove mounting hardware and lift transformer",
+		"Position new transformer and secure mounting",
+		"Connect secondary then primary connections",
+		"Perform initial testing and inspection",
+		"Coordinate re-energization with system operations"
+	] else if (vars.toolInput.procedureType contains "maintenance") [
+		"Review maintenance history and known issues",
+		"Perform visual inspection for damage or contamination",
+		"Check oil level and condition (if oil-filled)",
+		"Inspect bushings and connection points",
+		"Test insulation resistance if required",
+		"Check grounding connections",
+		"Document findings and update maintenance records"
+	] else [
+		"Follow general transformer safety procedures",
+		"Consult with engineering for specific requirements",
+		"Document all activities performed"
+	],
+	requiredTools: [
+		"Voltage detector", "Hot stick", "Socket wrench set", 
+		"Lifting equipment", "Torque wrench", "PPE kit"
+	],
+	estimatedTime: if (vars.toolInput.procedureType contains "replacement") "4-6 hours" 
+		else if (vars.toolInput.procedureType contains "maintenance") "2-3 hours" 
+		else "1-2 hours"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+
+	<sub-flow name="get-fuse-sop-subflow" doc:id="get-fuse-sop-subflow">
+		<ee:transform doc:name="Mock Fuse SOP" doc:id="mock-fuse-sop">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+{
+	title: "Fuse " ++ vars.toolInput.procedureType ++ " Procedure",
+	documentId: "SOP-FUSE-" ++ (vars.toolInput.procedureType upper) ++ "-001",
+	safetyPrecautions: [
+		"Verify circuit is de-energized before fuse handling",
+		"Use insulated tools and hot sticks",
+		"Maintain proper approach distances",
+		"Wear appropriate PPE for voltage level",
+		"Never operate fuses under load"
+	],
+	steps: if (vars.toolInput.procedureType contains "replacement") [
+		"Identify the correct fuse type and rating",
+		"Open upstream switching device",
+		"Verify circuit is de-energized with voltage detector",
+		"Apply personal protective grounds if required",
+		"Remove blown fuse using fuse puller",
+		"Inspect fuse holder for damage or contamination",
+		"Install new fuse ensuring proper connection",
+		"Remove grounds and close upstream switch",
+		"Test operation and verify proper function"
+	] else if (vars.toolInput.procedureType contains "inspection") [
+		"Perform visual inspection without touching fuses",
+		"Look for signs of arcing, corrosion, or damage", 
+		"Check fuse ratings match circuit requirements",
+		"Verify proper mounting and connection",
+		"Document any issues found"
+	] else [
+		"Follow general fuse safety procedures",
+		"Coordinate with operations if switching required"
+	],
+	requiredTools: [
+		"Fuse puller", "Voltage detector", "Hot stick",
+		"Insulated gloves", "Safety glasses", "Replacement fuses"
+	],
+	estimatedTime: if (vars.toolInput.procedureType contains "replacement") "30-60 minutes"
+		else "15-30 minutes"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+
+	<sub-flow name="get-meter-sop-subflow" doc:id="get-meter-sop-subflow">
+		<ee:transform doc:name="Mock Meter SOP" doc:id="mock-meter-sop">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+{
+	title: "Meter " ++ vars.toolInput.procedureType ++ " Procedure", 
+	documentId: "SOP-METER-" ++ (vars.toolInput.procedureType upper) ++ "-001",
+	safetyPrecautions: [
+		"Treat all meter installations as energized",
+		"Use insulated tools when working near live parts",
+		"Verify proper PPE for voltage level",
+		"Be aware of arc flash hazards",
+		"Follow company lockout/tagout procedures"
+	],
+	steps: if (vars.toolInput.procedureType contains "installation") [
+		"Verify meter socket is properly installed and grounded",
+		"Check that service conductors are properly sized",
+		"Inspect meter socket for damage or foreign objects",
+		"Program meter with customer account information",
+		"Insert meter into socket ensuring proper alignment",
+		"Verify secure connection and proper seating",
+		"Test meter function and communication",
+		"Install meter seal and document installation"
+	] else if (vars.toolInput.procedureType contains "reading") [
+		"Approach meter safely and identify any hazards",
+		"Read meter display or remove for testing if required",
+		"Document meter reading and any irregularities",
+		"Check for signs of tampering or damage",
+		"Verify meter seal integrity"
+	] else [
+		"Follow standard meter safety procedures",
+		"Document all activities performed"
+	],
+	requiredTools: [
+		"Meter programmer", "Insulated tools", "Volt meter",
+		"Meter seals", "Safety equipment", "Work order documentation"
+	],
+	estimatedTime: if (vars.toolInput.procedureType contains "installation") "45-90 minutes"
+		else "10-20 minutes"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+
+	<sub-flow name="get-general-sop-subflow" doc:id="get-general-sop-subflow">
+		<ee:transform doc:name="Mock General SOP" doc:id="mock-general-sop">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+{
+	title: "General " ++ vars.toolInput.equipmentType ++ " " ++ vars.toolInput.procedureType,
+	documentId: "SOP-GEN-" ++ (vars.toolInput.equipmentType upper) ++ "-001",
+	safetyPrecautions: [
+		"Perform job safety analysis before beginning work",
+		"Verify proper training and authorization for task",
+		"Use appropriate PPE for the work environment",
+		"Follow all company safety procedures",
+		"Maintain communication with supervisor"
+	],
+	steps: [
+		"Review work order and safety requirements",
+		"Gather required tools and materials",
+		"Perform pre-work safety inspection",
+		"Complete work according to specifications",
+		"Perform post-work testing and inspection",
+		"Document work completed and any issues"
+	],
+	requiredTools: [
+		"Standard tool kit", "PPE", "Testing equipment",
+		"Documentation materials"
+	],
+	estimatedTime: "Varies by specific task"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+
+	<!-- Work Order Retrieval Subflows -->
+	<sub-flow name="get-specific-work-order-subflow" doc:id="get-specific-work-order-subflow">
+		<ee:transform doc:name="Mock Specific Work Order Query" doc:id="mock-specific-wo-query">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+[{
+	work_order_number: vars.toolInput.workOrderNumber,
+	status: "in_progress",
+	priority: "high",
+	scheduled_date: "2024-01-15",
+	scheduled_time: "09:00",
+	estimated_duration: 3,
+	customer_name: "ABC Manufacturing Corp",
+	service_address: "1234 Industrial Blvd, Manufacturing District",
+	customer_phone: "(555) 123-4567",
+	contact_notes: "Contact facility manager John Smith for site access",
+	work_type: "Emergency Repair",
+	description: "Power outage affecting main production line - investigate transformer issue",
+	special_instructions: "Coordinate with plant operations before any switching. Critical production equipment.",
+	required_skills: "High voltage, transformer maintenance",
+	asset_id: "TRANS-001-MFG",
+	equipment_type: "Distribution Transformer",
+	safety_notes: "High voltage area. Coordinate with plant safety officer. Arc flash PPE required."
+}]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+
+	<sub-flow name="get-technician-work-orders-subflow" doc:id="get-technician-work-orders-subflow">
+		<ee:transform doc:name="Mock Technician Work Orders Query" doc:id="mock-tech-wo-query">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+[
+	{
+		work_order_number: "WO-2024-001234",
+		status: "pending",
+		priority: "medium",
+		scheduled_date: "2024-01-15",
+		scheduled_time: "08:00",
+		estimated_duration: 2,
+		customer_name: "Residential - Johnson",
+		service_address: "456 Oak Street, Residential Area",
+		customer_phone: "(555) 987-6543",
+		contact_notes: "Customer will be home after 8 AM",
+		work_type: "Meter Reading",
+		description: "Monthly meter reading - standard residential service",
+		special_instructions: "Beware of dog in backyard",
+		required_skills: "Standard",
+		asset_id: "MTR-RES-4567",
+		equipment_type: "Residential Meter",
+		safety_notes: "Standard residential safety procedures"
+	},
+	{
+		work_order_number: "WO-2024-001235", 
+		status: "pending",
+		priority: "high",
+		scheduled_date: "2024-01-15",
+		scheduled_time: "10:30",
+		estimated_duration: 4,
+		customer_name: "City Municipal Building",
+		service_address: "100 Main Street, Downtown",
+		customer_phone: "(555) 555-0100",
+		contact_notes: "Contact building maintenance at ext. 205",
+		work_type: "Preventive Maintenance",
+		description: "Quarterly inspection and maintenance of main distribution panel",
+		special_instructions: "Coordinate with building operations to minimize disruption",
+		required_skills: "Commercial electrical, testing equipment",
+		asset_id: "PANEL-MUN-001",
+		equipment_type: "Main Distribution Panel",
+		safety_notes: "Commercial facility. Follow municipal building safety protocols."
+	}
+]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+
+</mule>

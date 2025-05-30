@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%-5p %d [%t] %c: %m%n"/>
+        </Console>
+        
+        <RollingFile name="FileAppender"
+                     fileName="logs/field-operations-support-agent.log"
+                     filePattern="logs/field-operations-support-agent-%i.log.gz">
+            <PatternLayout pattern="%-5p %d [%t] %c: %m%n"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="10 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <!-- Field Operations Support Agent Specific Loggers -->
+        <Logger name="com.utilities.field-operations" level="INFO"/>
+        <Logger name="com.mulesoft.mcp" level="DEBUG"/>
+        <Logger name="com.mulesoft.mac" level="INFO"/>
+        
+        <!-- Database Loggers -->
+        <Logger name="org.mule.extension.db" level="INFO"/>
+        
+        <!-- HTTP Loggers -->
+        <Logger name="org.mule.extension.http" level="INFO"/>
+        
+        <!-- CXF is used heavily by Mule for web services -->
+        <Logger name="org.apache.cxf" level="WARN"/>
+
+        <!-- Apache commons tend to make a lot of noise which can clutter the log-->
+        <Logger name="org.apache" level="WARN"/>
+
+        <!-- Reduce startup noise -->
+        <Logger name="org.springframework.beans.factory" level="WARN"/>
+
+        <!-- Mule classes -->
+        <Logger name="org.mule" level="INFO"/>
+        <Logger name="com.mulesoft" level="INFO"/>
+
+        <!-- Reduce DM verbosity -->
+        <Logger name="org.jetel" level="WARN"/>
+        <Logger name="Tracking" level="WARN"/>
+        
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
+        </Root>
+    </Loggers>
+
+</Configuration>

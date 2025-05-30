@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%-5p %d [%t] %c: %m%n"/>
+        </Console>
+    </Appenders>
+
+    <Loggers>
+        <!-- Reduce startup noise -->         
+        <Logger name="org.springframework.beans.factory" level="WARN"/>
+
+        <!-- Mule classes -->      
+        <Logger name="org.mule" level="INFO"/>
+        <Logger name="com.mulesoft" level="INFO"/>
+
+        <!-- Reduce DM verbosity -->
+        <Logger name="org.jetel" level="WARN"/>
+        <Logger name="Tracking" level="WARN"/>
+        
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
+        </Root>
+    </Loggers>
+
+</Configuration>

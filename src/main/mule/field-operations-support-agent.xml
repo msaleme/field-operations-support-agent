@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:mac="http://www.mulesoft.org/schema/mule/mac" 
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" 
+	xmlns:mcp="http://www.mulesoft.org/schema/mule/mcp" 
+	xmlns="http://www.mulesoft.org/schema/mule/core" 
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/mcp http://www.mulesoft.org/schema/mule/mcp/current/mule-mcp.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/mac http://www.mulesoft.org/schema/mule/mac/current/mule-mac.xsd">
+
+	<!-- HTTP Listener Configuration -->
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="http-listener-config">
+		<http:listener-connection host="${http.host}" port="${http.port}" />
+	</http:listener-config>
+	
+	<!-- Claude AI Configuration via MAC Connector -->
+	<mac:config name="Claude_AI_Config" doc:name="Claude AI Config" doc:id="claude-ai-config">
+		<mac:connection apiKey="${claude.api.key}" model="${claude.model}" />
+	</mac:config>
+	
+	<!-- Database Configuration for Backend Systems -->
+	<db:config name="Asset_Management_DB_Config" doc:name="Asset Management DB Config" doc:id="asset-db-config">
+		<db:generic-connection url="${asset.db.url}" driverClassName="${asset.db.driver}" user="${asset.db.user}" password="${asset.db.password}" />
+	</db:config>
+	
+	<db:config name="Inventory_DB_Config" doc:name="Inventory DB Config" doc:id="inventory-db-config">
+		<db:generic-connection url="${inventory.db.url}" driverClassName="${inventory.db.driver}" user="${inventory.db.user}" password="${inventory.db.password}" />
+	</db:config>
+	
+	<!-- MCP Server Configuration -->
+	<mcp:server-config name="MCP_Server_Config" doc:name="MCP Server Config" doc:id="mcp-server-config" 
+		serverName="field-operations-support-agent" serverVersion="1.0.0">
+		<mcp:sse-server-connection listenerConfig="HTTP_Listener_config" />
+	</mcp:server-config>
+
+	<!-- MCP Session Initialization Flow -->
+	<flow name="mcp-session-init-flow" doc:id="mcp-session-init-flow">
+		<mcp:on-new-session-listener doc:name="On new session listener" doc:id="new-session-listener" config-ref="MCP_Server_Config" />
+		<logger level="INFO" doc:name="Logger" doc:id="session-logger" message="New Field Operations Support Agent session started for technician: #[vars.sessionId]"/>
+		<set-variable variableName="sessionContext" value="#[{}]" doc:name="Initialize Session Context" doc:id="init-session-context" />
+	</flow>
+
+	<!-- F1: SOP & Technical Manual Access Tool -->
+	<flow name="sop-manual-access-flow" doc:id="sop-manual-access-flow">
+		<mcp:tool-listener doc:name="SOP Manual Access Tool" doc:id="sop-tool-listener" config-ref="MCP_Server_Config" name="getSopManual">
+			<mcp:description><![CDATA[Retrieves standard operating procedures (SOPs) and technical manuals for specific equipment types, procedures, or safety guidelines. Helps field technicians access correct procedures and technical specifications on-site.]]></mcp:description>
+			<mcp:parameters-schema><![CDATA[{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "equipmentType": {
+      "type": "string",
+      "description": "Type of equipment (e.g., transformer, fuse, meter, pole)"
+    },
+    "procedureType": {
+      "type": "string",
+      "description": "Type of procedure (e.g., replacement, installation, maintenance, safety)"
+    },
+    "modelNumber": {
+      "type": "string",
+      "description": "Specific model number or equipment identifier (optional)"
+    }
+  },
+  "required": ["equipmentType", "procedureType"],
+  "additionalProperties": false
+}]]></mcp:parameters-schema>
+			<mcp:responses>
+				<mcp:text-tool-response-content text="#[payload as String]" />
+			</mcp:responses>
+		</mcp:tool-listener>
+		
+		<logger level="INFO" doc:name="Logger" doc:id="sop-request-logger" 
+			message="SOP/Manual request - Equipment: #[vars.toolInput.equipmentType], Procedure: #[vars.toolInput.procedureType]"/>
+		
+		<choice doc:name="Route by Equipment Type" doc:id="equipment-type-choice">
+			<when expression="#[vars.toolInput.equipmentType contains 'transformer']">
+				<flow-ref doc:name="Get Transformer SOP" doc:id="transformer-sop-ref" name="get-transformer-sop-subflow"/>
+			</when>
+			<when expression="#[vars.toolInput.equipmentType contains 'fuse']">
+				<flow-ref doc:name="Get Fuse SOP" doc:id="fuse-sop-ref" name="get-fuse-sop-subflow"/>
+			</when>
+			<when expression="#[vars.toolInput.equipmentType contains 'meter']">
+				<flow-ref doc:name="Get Meter SOP" doc:id="meter-sop-ref" name="get-meter-sop-subflow"/>
+			</when>
+			<otherwise>
+				<flow-ref doc:name="Get General SOP" doc:id="general-sop-ref" name="get-general-sop-subflow"/>
+			</otherwise>
+		</choice>
+		
+		<ee:transform doc:name="Format SOP Response" doc:id="format-sop-response">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output text/plain
+---
+"**" ++ payload.title ++ "**\n\n" ++
+"Equipment: " ++ vars.toolInput.equipmentType ++ "\n" ++
+"Procedure: " ++ vars.toolInput.procedureType ++ "\n\n" ++
+"**Safety Precautions:**\n" ++ 
+(payload.safetyPrecautions joinBy "\n• ") ++ "\n\n" ++
+"**Steps:**\n" ++ 
+(payload.steps map ((step, index) -> (index + 1) ++ ". " ++ step) joinBy "\n") ++ "\n\n" ++
+"**Required Tools:** " ++ (payload.requiredTools joinBy ", ") ++ "\n" ++
+"**Estimated Time:** " ++ payload.estimatedTime ++ "\n" ++
+"**Document ID:** " ++ payload.documentId]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+
+	<!-- F2: Asset Maintenance History Lookup Tool -->
+	<flow name="asset-history-lookup-flow" doc:id="asset-history-lookup-flow">
+		<mcp:tool-listener doc:name="Asset History Tool" doc:id="asset-history-tool-listener" config-ref="MCP_Server_Config" name="getAssetHistory">
+			<mcp:description><![CDATA[Retrieves maintenance history and known issues for specific assets by asset ID or location. Helps technicians understand past problems and repairs for better diagnosis.]]></mcp:description>
+			<mcp:parameters-schema><![CDATA[{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "assetId": {
+      "type": "string",
+      "description": "Unique asset identifier or tag number"
+    },
+    "location": {
+      "type": "string",
+      "description": "Asset location (if asset ID not available)"
+    },
+    "equipmentType": {
+      "type": "string",
+      "description": "Type of equipment to filter results (optional)"
+    }
+  },
+  "oneOf": [
+    {"required": ["assetId"]},
+    {"required": ["location"]}
+  ],
+  "additionalProperties": false
+}]]></mcp:parameters-schema>
+			<mcp:responses>
+				<mcp:text-tool-response-content text="#[payload as String]" />
+			</mcp:responses>
+		</mcp:tool-listener>
+		
+		<logger level="INFO" doc:name="Logger" doc:id="asset-history-logger" 
+			message="Asset history request - Asset ID: #[vars.toolInput.assetId default 'N/A'], Location: #[vars.toolInput.location default 'N/A']"/>
+		
+		<choice doc:name="Query by Asset ID or Location" doc:id="asset-query-choice">
+			<when expression="#[vars.toolInput.assetId != null]">
+				<db:select doc:name="Query by Asset ID" doc:id="query-by-asset-id" config-ref="Asset_Management_DB_Config">
+					<db:sql><![CDATA[SELECT 
+    a.asset_id, a.asset_type, a.location, a.installation_date,
+    m.maintenance_date, m.maintenance_type, m.description, m.technician_id,
+    m.parts_used, m.cost, m.next_maintenance_due,
+    i.issue_date, i.issue_type, i.severity, i.resolution
+FROM assets a
+LEFT JOIN maintenance_history m ON a.asset_id = m.asset_id
+LEFT JOIN known_issues i ON a.asset_id = i.asset_id
+WHERE a.asset_id = :assetId
+ORDER BY m.maintenance_date DESC, i.issue_date DESC]]></db:sql>
+					<db:input-parameters><![CDATA[#[{'assetId': vars.toolInput.assetId}]]]></db:input-parameters>
+				</db:select>
+			</when>
+			<otherwise>
+				<db:select doc:name="Query by Location" doc:id="query-by-location" config-ref="Asset_Management_DB_Config">
+					<db:sql><![CDATA[SELECT 
+    a.asset_id, a.asset_type, a.location, a.installation_date,
+    m.maintenance_date, m.maintenance_type, m.description, m.technician_id,
+    m.parts_used, m.cost, m.next_maintenance_due,
+    i.issue_date, i.issue_type, i.severity, i.resolution
+FROM assets a
+LEFT JOIN maintenance_history m ON a.asset_id = m.asset_id
+LEFT JOIN known_issues i ON a.asset_id = i.asset_id
+WHERE a.location LIKE :location
+ORDER BY a.asset_id, m.maintenance_date DESC, i.issue_date DESC]]></db:sql>
+					<db:input-parameters><![CDATA[#[{'location': '%' ++ vars.toolInput.location ++ '%'}]]]></db:input-parameters>
+				</db:select>
+			</otherwise>
+		</choice>
+		
+		<ee:transform doc:name="Format Asset History Response" doc:id="format-asset-history-response">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output text/plain
+---
+if (isEmpty(payload))
+	"No asset history found for the specified criteria."
+else
+	do {
+		var groupedByAsset = payload groupBy $.asset_id
+		---
+		(groupedByAsset pluck ((records, assetId) -> do {
+			var assetInfo = records[0]
+			var maintenanceRecords = records filter ($.maintenance_date != null)
+			var issueRecords = records filter ($.issue_date != null)
+			---
+			"**Asset: " ++ assetId ++ "**\n" ++
+			"Type: " ++ assetInfo.asset_type ++ "\n" ++
+			"Location: " ++ assetInfo.location ++ "\n" ++
+			"Installation Date: " ++ assetInfo.installation_date ++ "\n\n" ++
+			
+			(if (!isEmpty(maintenanceRecords))
+				"**Recent Maintenance History:**\n" ++
+				(maintenanceRecords[0 to 4] map (record -> 
+					"• " ++ record.maintenance_date ++ " - " ++ record.maintenance_type ++ 
+					": " ++ record.description ++ 
+					(if (record.parts_used != null) " (Parts: " ++ record.parts_used ++ ")" else "")
+				) joinBy "\n") ++ "\n\n"
+			else "") ++
+			
+			(if (!isEmpty(issueRecords))
+				"**Known Issues:**\n" ++
+				(issueRecords[0 to 2] map (issue -> 
+					"• " ++ issue.issue_date ++ " - " ++ issue.issue_type ++ 
+					" (Severity: " ++ issue.severity ++ "): " ++ issue.resolution
+				) joinBy "\n") ++ "\n\n"
+			else "") ++
+			
+			(if (assetInfo.next_maintenance_due != null)
+				"**Next Maintenance Due:** " ++ assetInfo.next_maintenance_due ++ "\n"
+			else "")
+		})) joinBy "\n" ++ "="*50 ++ "\n"
+	}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+
+	<!-- F3: Parts & Inventory Check Tool -->
+	<flow name="parts-inventory-check-flow" doc:id="parts-inventory-check-flow">
+		<mcp:tool-listener doc:name="Parts Inventory Tool" doc:id="parts-inventory-tool-listener" config-ref="MCP_Server_Config" name="checkPartsInventory">
+			<mcp:description><![CDATA[Checks parts availability in local warehouses or technician trucks. Can also find compatible alternatives for specific part numbers.]]></mcp:description>
+			<mcp:parameters-schema><![CDATA[{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "partNumber": {
+      "type": "string",
+      "description": "Specific part number to check"
+    },
+    "partDescription": {
+      "type": "string",
+      "description": "Description of the part if part number is unknown"
+    },
+    "location": {
+      "type": "string",
+      "description": "Warehouse location or 'truck' for mobile inventory"
+    },
+    "findAlternatives": {
+      "type": "boolean",
+      "description": "Whether to search for compatible alternatives",
+      "default": false
+    }
+  },
+  "anyOf": [
+    {"required": ["partNumber"]},
+    {"required": ["partDescription"]}
+  ],
+  "additionalProperties": false
+}]]></mcp:parameters-schema>
+			<mcp:responses>
+				<mcp:text-tool-response-content text="#[payload as String]" />
+			</mcp:responses>
+		</mcp:tool-listener>
+		
+		<logger level="INFO" doc:name="Logger" doc:id="parts-inventory-logger" 
+			message="Parts inventory request - Part: #[vars.toolInput.partNumber default vars.toolInput.partDescription], Location: #[vars.toolInput.location default 'all']"/>
+		
+		<db:select doc:name="Check Parts Inventory" doc:id="check-parts-inventory" config-ref="Inventory_DB_Config">
+			<db:sql><![CDATA[SELECT 
+    p.part_number, p.description, p.category, p.manufacturer,
+    i.location, i.quantity_available, i.reserved_quantity,
+    i.last_updated, i.reorder_level,
+    alt.alternative_part_number, alt.compatibility_notes
+FROM parts p
+INNER JOIN inventory i ON p.part_id = i.part_id
+LEFT JOIN part_alternatives alt ON p.part_id = alt.primary_part_id
+WHERE (p.part_number = :partNumber OR p.description LIKE :partDescription)
+    AND (:location IS NULL OR i.location = :location OR i.location LIKE '%truck%')
+    AND i.quantity_available > 0
+ORDER BY i.location, i.quantity_available DESC]]></db:sql>
+			<db:input-parameters><![CDATA[#[{
+    'partNumber': vars.toolInput.partNumber,
+    'partDescription': if (vars.toolInput.partDescription != null) '%' ++ vars.toolInput.partDescription ++ '%' else null,
+    'location': vars.toolInput.location
+}]]]></db:input-parameters>
+		</db:select>
+		
+		<choice doc:name="Check if alternatives needed" doc:id="alternatives-choice">
+			<when expression="#[vars.toolInput.findAlternatives == true and isEmpty(payload)]">
+				<db:select doc:name="Find Alternative Parts" doc:id="find-alternatives" config-ref="Inventory_DB_Config">
+					<db:sql><![CDATA[SELECT DISTINCT
+    p.part_number, p.description, p.category, p.manufacturer,
+    i.location, i.quantity_available, i.reserved_quantity,
+    alt.compatibility_notes, 'ALTERNATIVE' as part_type
+FROM parts p
+INNER JOIN inventory i ON p.part_id = i.part_id
+INNER JOIN part_alternatives alt ON p.part_id = alt.alternative_part_id
+INNER JOIN parts primary_part ON alt.primary_part_id = primary_part.part_id
+WHERE (primary_part.part_number = :partNumber OR primary_part.description LIKE :partDescription)
+    AND (:location IS NULL OR i.location = :location OR i.location LIKE '%truck%')
+    AND i.quantity_available > 0
+ORDER BY i.location, i.quantity_available DESC]]></db:sql>
+					<db:input-parameters><![CDATA[#[{
+    'partNumber': vars.toolInput.partNumber,
+    'partDescription': if (vars.toolInput.partDescription != null) '%' ++ vars.toolInput.partDescription ++ '%' else null,
+    'location': vars.toolInput.location
+}]]]></db:input-parameters>
+				</db:select>
+			</when>
+		</choice>
+		
+		<ee:transform doc:name="Format Inventory Response" doc:id="format-inventory-response">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output text/plain
+---
+if (isEmpty(payload))
+	"No parts found matching the criteria. Consider checking alternative part numbers or contacting the warehouse."
+else
+	do {
+		var groupedByLocation = payload groupBy $.location
+		---
+		"**Parts Inventory Results**\n" ++
+		"Search criteria: " ++ (vars.toolInput.partNumber default vars.toolInput.partDescription) ++ "\n\n" ++
+		
+		(groupedByLocation pluck ((parts, location) -> 
+			"**Location: " ++ location ++ "**\n" ++
+			(parts map (part -> 
+				"• " ++ part.part_number ++ " - " ++ part.description ++ "\n" ++
+				"  Available: " ++ part.quantity_available ++ 
+				(if (part.reserved_quantity > 0) " (Reserved: " ++ part.reserved_quantity ++ ")" else "") ++ "\n" ++
+				"  Manufacturer: " ++ part.manufacturer ++ "\n" ++
+				(if (part.part_type == "ALTERNATIVE") 
+					"  ⚠️  Alternative part - " ++ part.compatibility_notes ++ "\n"
+				else "") ++
+				"  Last updated: " ++ part.last_updated ++ "\n"
+			) joinBy "\n")
+		) joinBy "\n" ++ "="*40 ++ "\n") ++
+		
+		"\n**Recommendations:**\n" ++
+		"• Contact warehouse before travel if quantity is critical\n" ++
+		"• Check truck inventory first for immediate needs\n" ++
+		"• Consider ordering if quantities are below reorder levels"
+	}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+
+	<!-- F4: Work Order Information Retrieval Tool -->
+	<flow name="work-order-info-flow" doc:id="work-order-info-flow">
+		<mcp:tool-listener doc:name="Work Order Info Tool" doc:id="work-order-tool-listener" config-ref="MCP_Server_Config" name="getWorkOrderInfo">
+			<mcp:description><![CDATA[Retrieves work order details including customer information, job specifications, and scheduling information. Helps technicians access assignment details without navigating multiple apps.]]></mcp:description>
+			<mcp:parameters-schema><![CDATA[{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "workOrderNumber": {
+      "type": "string",
+      "description": "Specific work order number"
+    },
+    "technicianId": {
+      "type": "string",
+      "description": "Technician ID to get assigned work orders"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "in_progress", "completed", "cancelled"],
+      "description": "Work order status filter"
+    }
+  },
+  "anyOf": [
+    {"required": ["workOrderNumber"]},
+    {"required": ["technicianId"]}
+  ],
+  "additionalProperties": false
+}]]></mcp:parameters-schema>
+			<mcp:responses>
+				<mcp:text-tool-response-content text="#[payload as String]" />
+			</mcp:responses>
+		</mcp:tool-listener>
+		
+		<logger level="INFO" doc:name="Logger" doc:id="work-order-logger" 
+			message="Work order request - WO: #[vars.toolInput.workOrderNumber default 'N/A'], Technician: #[vars.toolInput.technicianId default 'N/A']"/>
+		
+		<choice doc:name="Query by WO Number or Technician" doc:id="work-order-query-choice">
+			<when expression="#[vars.toolInput.workOrderNumber != null]">
+				<flow-ref doc:name="Get Specific Work Order" doc:id="get-specific-wo-ref" name="get-specific-work-order-subflow"/>
+			</when>
+			<otherwise>
+				<flow-ref doc:name="Get Technician Work Orders" doc:id="get-tech-wo-ref" name="get-technician-work-orders-subflow"/>
+			</otherwise>
+		</choice>
+		
+		<ee:transform doc:name="Format Work Order Response" doc:id="format-work-order-response">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output text/plain
+---
+if (isEmpty(payload))
+	"No work orders found matching the criteria."
+else
+	(payload map (wo -> 
+		"**Work Order: " ++ wo.work_order_number ++ "**\n" ++
+		"Status: " ++ wo.status ++ "\n" ++
+		"Priority: " ++ wo.priority ++ "\n" ++
+		"Scheduled: " ++ wo.scheduled_date ++ " " ++ wo.scheduled_time ++ "\n" ++
+		"Estimated Duration: " ++ wo.estimated_duration ++ " hours\n\n" ++
+		
+		"**Customer Information:**\n" ++
+		"Name: " ++ wo.customer_name ++ "\n" ++
+		"Address: " ++ wo.service_address ++ "\n" ++
+		"Phone: " ++ wo.customer_phone ++ "\n" ++
+		"Contact Notes: " ++ (wo.contact_notes default "None") ++ "\n\n" ++
+		
+		"**Job Details:**\n" ++
+		"Type: " ++ wo.work_type ++ "\n" ++
+		"Description: " ++ wo.description ++ "\n" ++
+		"Special Instructions: " ++ (wo.special_instructions default "None") ++ "\n" ++
+		"Required Skills: " ++ (wo.required_skills default "Standard") ++ "\n\n" ++
+		
+		"**Equipment/Assets:**\n" ++
+		"Asset ID: " ++ (wo.asset_id default "N/A") ++ "\n" ++
+		"Equipment Type: " ++ (wo.equipment_type default "N/A") ++ "\n\n" ++
+		
+		"**Safety Considerations:**\n" ++
+		(wo.safety_notes default "Follow standard safety procedures") ++ "\n"
+	) joinBy "\n" ++ "="*50 ++ "\n")]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+
+</mule>
