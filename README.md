@@ -55,7 +55,7 @@ src/main/mule/error-handlers.xml                   Shared error-handling logic
 src/main/resources/application-types.xml           DataWeave type definitions
 src/main/resources/config.properties               Externalized configuration
 src/main/resources/log4j2.xml                      Logging configuration
-src/test/munit/field-operations-support-agent-test.xml   MUnit test suite (16 tests)
+src/test/munit/field-operations-support-agent-test.xml   MUnit test suite containing 8 test cases
 exchange-docs/home.md                              Anypoint Exchange asset documentation
 architecture-diagram.md                            Architecture overview
 pom.xml / mule-artifact.json                       Maven build and Mule application metadata
