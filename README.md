@@ -43,6 +43,26 @@ Production implementations should:
 - database or API adapters for enterprise systems
 - MCP-compatible assistant client
 
+## What's actually included
+
+This repository is a Mule 4 application, not just documentation:
+
+```text
+src/main/mule/field-operations-support-agent.xml   Main flow: MCP server listener and tool routing
+src/main/mule/subflows.xml                         Supporting sub-flows for the four tools
+src/main/mule/global-config.xml                    Connector and global configuration
+src/main/mule/error-handlers.xml                   Shared error-handling logic
+src/main/resources/application-types.xml           DataWeave type definitions
+src/main/resources/config.properties               Externalized configuration
+src/main/resources/log4j2.xml                      Logging configuration
+src/test/munit/field-operations-support-agent-test.xml   MUnit test suite (16 tests)
+exchange-docs/home.md                              Anypoint Exchange asset documentation
+architecture-diagram.md                            Architecture overview
+pom.xml / mule-artifact.json                       Maven build and Mule application metadata
+```
+
+The application exposes four MCP tools to the assistant: `getSopManual`, `getAssetHistory`, `checkPartsInventory`, and `getWorkOrderInfo`.
+
 ## Getting started
 
 Review the Mule configuration and replace example endpoints and credentials with environment-managed configuration. Never commit real credentials. Connect only non-production data until security and operational reviews are complete.
