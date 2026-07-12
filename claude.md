@@ -15,7 +15,7 @@ I'll create a comprehensive Claude.md file for instructing Claude on MuleSoft to
 - Security and performance guidelines
 - Documentation standards for consistent help
 
-The guide ensures that Claude will provide comprehensive, production-ready MuleSoft solutions that follow industry best practices and the ALC methodology. It includes practical code examples, proper error handling patterns, and architectural guidance for building robust integration solutions.
+The guide helps Claude produce comprehensive, well-structured MuleSoft reference-implementation examples that follow API-led (ALC) patterns and general best practices. (Reference/demonstration material — not a claim of production-readiness.) It includes practical code examples, proper error handling patterns, and architectural guidance for building robust integration solutions.
 
 Would you like me to expand on any particular section or add specific patterns for certain integration scenarios?
 
